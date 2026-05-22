@@ -12,6 +12,7 @@ function load() {
 }
 
 function save(data) {
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   fs.writeFileSync(DB_PATH, JSON.stringify(data), 'utf8');
 }
 
