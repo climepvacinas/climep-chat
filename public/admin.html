@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Climep — Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4ff; color: #111827; min-height: 100vh;
+    }
+    header {
+      background: #1e40af; color: #fff; padding: 0 32px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header .links { display: flex; gap: 16px; align-items: center; font-size: 14px; }
+    header a { color: #bfdbfe; text-decoration: none; }
+    header a:hover { color: #fff; }
+    header button {
+      background: rgba(255,255,255,0.15); border: none; color: #fff;
+      padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 14px;
+    }
+    header button:hover { background: rgba(255,255,255,0.25); }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 4px; margin-bottom: 24px; }
+    .tab {
+      padding: 10px 20px; border-radius: 8px 8px 0 0; font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none; background: #e0e7ff; color: #3730a3; transition: background 0.15s;
+    }
+    .tab.active { background: #fff; color: #1e40af; border-bottom: 2px solid #1e40af; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Cards */
+    .card {
+      background: #fff; border-radius: 12px; padding: 24px;
+      box-shadow: 0 2px 12px rgba(30,64,175,0.08); margin-bottom: 24px;
+    }
+    .card-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; color: #1e40af; }
+
+    /* Form */
+    .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .field { flex: 1; min-width: 180px; }
+    .field label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .field input, .field select {
+      width: 100%; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px;
+      font-size: 14px; outline: none; font-family: inherit;
+    }
+    .field input:focus, .field select:focus { border-color: #1e40af; }
+
+    /* Buttons */
+    .btn {
+      padding: 9px 18px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none; transition: background 0.15s;
+    }
+    .btn-primary { background: #1e40af; color: #fff; }
+    .btn-primary:hover { background: #1e3a8a; }
+    .btn-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .btn-danger:hover { background: #fee2e2; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 10px 12px; background: #f8faff; font-size: 12px; font-weight: 700; color: #6b7280; border-bottom: 1px solid #e5e7eb; }
+    td { padding: 12px; border-bottom: 1px solid #f3f4f6; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbff; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    }
+    .badge-admin { background: #dbeafe; color: #1e40af; }
+    .badge-user { background: #f3f4f6; color: #374151; }
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-error { background: #fef2f2; color: #b91c1c; }
+
+    /* Alerts */
+    .alert { padding: 10px 14px; border-radius: 8px; font-size: 14px; margin-bottom: 16px; display: none; }
+    .alert-success { background: #dcfce7; color: #166534; }
+    .alert-error { background: #fef2f2; color: #b91c1c; }
+
+    /* Filters */
+    .filters { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+    .filters select, .filters input { padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; }
+
+    .cdc-val { font-family: monospace; font-weight: 700; color: #166534; }
+    .empty { text-align: center; color: #9ca3af; padding: 32px; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>⚙️ Climep — Painel Admin</h1>
+    <div class="links">
+      <a href="/">← Voltar ao Chat</a>
+      <button id="logoutBtn">Sair</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" data-tab="users">👥 Usuários</button>
+      <button class="tab" data-tab="logs">📋 Logs de Atividade</button>
+    </div>
+
+    <!-- ── Usuários ── -->
+    <div class="tab-panel active" id="tab-users">
+      <div class="card">
+        <div class="card-title">Criar novo usuário</div>
+        <div class="alert alert-success" id="createSuccess"></div>
+        <div class="alert alert-error" id="createError"></div>
+        <div class="form-row">
+          <div class="field"><label>Nome completo</label><input type="text" id="newName" placeholder="Ex: Maria Silva"></div>
+          <div class="field"><label>Email</label><input type="email" id="newEmail" placeholder="maria@climep.com.br"></div>
+          <div class="field"><label>Senha</label><input type="password" id="newPass" placeholder="Mínimo 6 caracteres"></div>
+          <div class="field"><label>Perfil</label>
+            <select id="newRole">
+              <option value="user">Usuário (acesso ao chat)</option>
+              <option value="admin">Admin (chat + painel admin)</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <button class="btn btn-primary" id="createBtn">Criar Usuário</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Usuários cadastrados</div>
+        <table id="usersTable">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Perfil</th>
+              <th>Criado em</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody">
+            <tr><td colspan="5" class="empty">Carregando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Logs ── -->
+    <div class="tab-panel" id="tab-logs">
+      <div class="card">
+        <div class="card-title">Logs de Atividade</div>
+        <div class="filters">
+          <select id="filterStatus">
+            <option value="">Todos os status</option>
+            <option value="success">✅ Sucesso</option>
+            <option value="error">❌ Erro</option>
+          </select>
+          <input type="text" id="filterSearch" placeholder="Buscar por nome ou CPF…" style="flex:1;min-width:200px">
+          <button class="btn btn-primary btn-sm" id="filterBtn">Filtrar</button>
+          <button class="btn btn-sm" id="refreshBtn" style="background:#f3f4f6">↻ Atualizar</button>
+        </div>
+        <table id="logsTable">
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>Usuário</th>
+              <th>Paciente</th>
+              <th>CPF</th>
+              <th>CDC</th>
+              <th>Status</th>
+              <th>Detalhe</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody">
+            <tr><td colspan="7" class="empty">Carregando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Auth ──────────────────────────────────────────────────────────────────
+    const token = localStorage.getItem('climep_token');
+    if (!token) location.href = '/login';
+
+    async function api(url, options = {}) {
+      const r = await fetch(url, {
+        ...options,
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (r.status === 401) { location.href = '/login'; return; }
+      if (r.status === 403) { alert('Acesso negado. Apenas admins podem acessar este painel.'); location.href = '/'; return; }
+      return r.json();
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('climep_token');
+      localStorage.removeItem('climep_user');
+      location.href = '/login';
+    });
+
+    // Verificar se é admin
+    api('/api/me').then(user => {
+      if (!user || user.role !== 'admin') {
+        alert('Acesso negado. Somente admins podem acessar este painel.');
+        location.href = '/';
+      }
+    });
+
+    // ── Tabs ──────────────────────────────────────────────────────────────────
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+        if (tab.dataset.tab === 'logs') loadLogs();
+      });
+    });
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function esc(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function fmtDate(d) {
+      if (!d) return '—';
+      return new Date(d).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    }
+    function showAlert(id, msg, isError = false) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.className = `alert ${isError ? 'alert-error' : 'alert-success'}`;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 4000);
+    }
+
+    // ── Usuários ──────────────────────────────────────────────────────────────
+    let currentUserId = null;
+    api('/api/me').then(u => { if (u) currentUserId = u.id; });
+
+    async function loadUsers() {
+      const users = await api('/api/admin/users');
+      if (!users) return;
+      const body = document.getElementById('usersBody');
+      if (!users.length) { body.innerHTML = '<tr><td colspan="5" class="empty">Nenhum usuário cadastrado.</td></tr>'; return; }
+      body.innerHTML = users.map(u => `
+        <tr>
+          <td><b>${esc(u.name)}</b></td>
+          <td>${esc(u.email)}</td>
+          <td><span class="badge badge-${u.role}">${u.role === 'admin' ? 'Admin' : 'Usuário'}</span></td>
+          <td>${fmtDate(u.created_at)}</td>
+          <td style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm" style="background:#f3f4f6" onclick="changePassword(${u.id}, '${esc(u.name)}')">🔑 Senha</button>
+            ${u.id !== currentUserId ? `<button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id}, '${esc(u.name)}')">🗑 Excluir</button>` : '<span style="color:#9ca3af;font-size:12px">(você)</span>'}
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('createBtn').addEventListener('click', async () => {
+      const name = document.getElementById('newName').value.trim();
+      const email = document.getElementById('newEmail').value.trim();
+      const password = document.getElementById('newPass').value;
+      const role = document.getElementById('newRole').value;
+
+      if (!name || !email || !password) { showAlert('createError', 'Preencha todos os campos.', true); return; }
+
+      const btn = document.getElementById('createBtn');
+      btn.disabled = true;
+      const result = await api('/api/admin/users', {
+        method: 'POST', body: JSON.stringify({ name, email, password, role })
+      });
+      btn.disabled = false;
+
+      if (result?.error) { showAlert('createError', result.error, true); return; }
+      showAlert('createSuccess', `Usuário "${name}" criado com sucesso!`);
+      document.getElementById('newName').value = '';
+      document.getElementById('newEmail').value = '';
+      document.getElementById('newPass').value = '';
+      loadUsers();
+    });
+
+    async function deleteUser(id, name) {
+      if (!confirm(`Excluir o usuário "${name}"? Esta ação não pode ser desfeita.`)) return;
+      const result = await api(`/api/admin/users/${id}`, { method: 'DELETE' });
+      if (result?.error) { alert(result.error); return; }
+      loadUsers();
+    }
+
+    async function changePassword(id, name) {
+      const newPass = prompt(`Nova senha para "${name}" (mínimo 6 caracteres):`);
+      if (!newPass) return;
+      if (newPass.length < 6) { alert('Senha deve ter pelo menos 6 caracteres.'); return; }
+      const result = await api(`/api/admin/users/${id}/password`, {
+        method: 'PATCH', body: JSON.stringify({ password: newPass })
+      });
+      if (result?.error) { alert(result.error); return; }
+      alert('Senha alterada com sucesso!');
+    }
+
+    // ── Logs ──────────────────────────────────────────────────────────────────
+    let allLogs = [];
+
+    async function loadLogs() {
+      const status = document.getElementById('filterStatus').value;
+      let url = '/api/admin/logs?limit=500';
+      if (status) url += `&status=${status}`;
+      const logs = await api(url);
+      if (!logs) return;
+      allLogs = logs;
+      renderLogs(logs);
+    }
+
+    function renderLogs(logs) {
+      const search = document.getElementById('filterSearch').value.toLowerCase();
+      const filtered = search
+        ? logs.filter(l =>
+            (l.patient_name || '').toLowerCase().includes(search) ||
+            (l.cpf || '').includes(search) ||
+            (l.user_name || '').toLowerCase().includes(search)
+          )
+        : logs;
+
+      const body = document.getElementById('logsBody');
+      if (!filtered.length) { body.innerHTML = '<tr><td colspan="7" class="empty">Nenhum registro encontrado.</td></tr>'; return; }
+
+      body.innerHTML = filtered.map(l => `
+        <tr>
+          <td style="white-space:nowrap">${fmtDate(l.created_at)}</td>
+          <td>${esc(l.user_name)}</td>
+          <td>${esc(l.patient_name || '—')}</td>
+          <td style="font-family:monospace">${esc(l.cpf || '—')}</td>
+          <td>${l.cdc ? `<span class="cdc-val">${esc(l.cdc)}</span>` : '—'}</td>
+          <td><span class="badge badge-${l.status}">${l.status === 'success' ? '✅ Sucesso' : '❌ Erro'}</span></td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#6b7280" title="${esc(l.details)}">${esc(l.details || '—')}</td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('filterBtn').addEventListener('click', () => renderLogs(allLogs));
+    document.getElementById('refreshBtn').addEventListener('click', loadLogs);
+    document.getElementById('filterSearch').addEventListener('input', () => renderLogs(allLogs));
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    loadUsers();
+  </script>
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Climep — Chat de Cadastro</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4ff;
+      display: flex;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 240px; min-width: 240px; background: #1e40af; color: #fff;
+      display: flex; flex-direction: column; padding: 24px 16px;
+    }
+    .sidebar-logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .sidebar-sub { font-size: 12px; color: #bfdbfe; margin-bottom: 32px; }
+    .sidebar-user { margin-top: auto; }
+    .sidebar-user-name { font-size: 14px; font-weight: 600; }
+    .sidebar-user-email { font-size: 12px; color: #93c5fd; margin-top: 2px; }
+    .sidebar-btn {
+      display: block; width: 100%; margin-top: 10px; padding: 9px 12px;
+      background: rgba(255,255,255,0.12); border: none; border-radius: 8px;
+      color: #fff; font-size: 13px; font-weight: 500; cursor: pointer; text-align: left;
+      transition: background 0.15s; text-decoration: none;
+    }
+    .sidebar-btn:hover { background: rgba(255,255,255,0.22); }
+    .sidebar-hint {
+      font-size: 12px; color: #93c5fd; margin-top: 24px; line-height: 1.6;
+      border-top: 1px solid rgba(255,255,255,0.15); padding-top: 16px;
+    }
+
+    /* ── Chat area ── */
+    .chat-wrap { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .chat-header {
+      background: #fff; border-bottom: 1px solid #e5e7eb;
+      padding: 16px 24px; font-size: 15px; font-weight: 600; color: #1e40af;
+    }
+    .messages {
+      flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px;
+    }
+    .msg { display: flex; gap: 10px; max-width: 80%; }
+    .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+    .msg-avatar {
+      width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;
+    }
+    .msg.bot .msg-avatar { background: #dbeafe; color: #1e40af; }
+    .msg.user .msg-avatar { background: #1e40af; color: #fff; }
+    .msg-bubble {
+      padding: 12px 16px; border-radius: 14px; font-size: 14px; line-height: 1.6;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .msg.bot .msg-bubble { background: #fff; color: #111827; border: 1px solid #e5e7eb; border-top-left-radius: 4px; }
+    .msg.user .msg-bubble { background: #1e40af; color: #fff; border-top-right-radius: 4px; }
+    .msg-bubble b { font-weight: 700; }
+    .msg-bubble .cdc-badge {
+      display: inline-block; background: #dcfce7; color: #166534; font-weight: 700;
+      font-size: 18px; padding: 4px 12px; border-radius: 8px; margin: 4px 0;
+    }
+    .msg-bubble .error-badge {
+      display: inline-block; background: #fef2f2; color: #b91c1c;
+      padding: 4px 10px; border-radius: 6px; margin-top: 4px; font-size: 13px;
+    }
+
+    /* ── Typing indicator ── */
+    .typing { display: none; align-items: center; gap: 10px; padding: 0 24px 8px; }
+    .typing-dots { display: flex; gap: 4px; }
+    .typing-dots span {
+      width: 7px; height: 7px; border-radius: 50%; background: #93c5fd;
+      animation: bounce 1.2s infinite;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-6px); } }
+
+    /* ── Input area ── */
+    .input-area {
+      background: #fff; border-top: 1px solid #e5e7eb; padding: 16px 24px;
+      display: flex; gap: 10px; align-items: flex-end;
+    }
+    textarea {
+      flex: 1; min-height: 44px; max-height: 180px; padding: 10px 14px;
+      border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-family: inherit;
+      resize: none; outline: none; transition: border-color 0.15s; overflow-y: auto;
+      line-height: 1.5;
+    }
+    textarea:focus { border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30,64,175,0.1); }
+    .send-btn {
+      padding: 10px 18px; background: #1e40af; color: #fff; border: none;
+      border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s; white-space: nowrap; height: 44px;
+    }
+    .send-btn:hover { background: #1e3a8a; }
+    .send-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+    .input-hint { font-size: 11px; color: #9ca3af; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar">
+    <div class="sidebar-logo">Climep</div>
+    <div class="sidebar-sub">Cadastro de Pacientes</div>
+
+    <div class="sidebar-hint">
+      Cole o formulário preenchido no chat.<br><br>
+      O sistema vai registrar o paciente no imuneweb e retornar o <b>CDC</b>.
+    </div>
+
+    <div class="sidebar-user">
+      <div class="sidebar-user-name" id="userName">—</div>
+      <div class="sidebar-user-email" id="userEmail">—</div>
+      <a href="/admin" class="sidebar-btn" id="adminLink" style="display:none">⚙️ Painel Admin</a>
+      <button class="sidebar-btn" id="logoutBtn">↩ Sair</button>
+    </div>
+  </div>
+
+  <div class="chat-wrap">
+    <div class="chat-header">Chat de Cadastro</div>
+    <div class="messages" id="messages"></div>
+    <div class="typing" id="typing">
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>
+    <div class="input-area">
+      <div style="flex:1">
+        <textarea id="input" placeholder="Cole aqui o formulário preenchido…" rows="1"></textarea>
+        <div class="input-hint">Enter para enviar · Shift+Enter para nova linha</div>
+      </div>
+      <button class="send-btn" id="sendBtn">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    const token = localStorage.getItem('climep_token');
+    if (!token) location.href = '/login';
+
+    let currentUser = null;
+
+    async function initUser() {
+      try {
+        const r = await api('/api/me');
+        currentUser = r;
+        document.getElementById('userName').textContent = r.name;
+        document.getElementById('userEmail').textContent = r.email;
+        if (r.role === 'admin') document.getElementById('adminLink').style.display = 'block';
+      } catch { location.href = '/login'; }
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('climep_token');
+      localStorage.removeItem('climep_user');
+      location.href = '/login';
+    });
+
+    // ── API helper ────────────────────────────────────────────────────────────
+    async function api(url, options = {}) {
+      const r = await fetch(url, {
+        ...options,
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...options.headers }
+      });
+      if (r.status === 401) { location.href = '/login'; return; }
+      return r.json();
+    }
+
+    // ── Estado da conversa ────────────────────────────────────────────────────
+    let state = 'idle'; // 'idle' | 'waiting_sex'
+    let pendingData = null;
+
+    // ── Parser do formulário ──────────────────────────────────────────────────
+    function parseForm(text) {
+      const lines = text.split('\n').map(l => l.trim());
+      const result = {};
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (/como você conheceu/i.test(line)) {
+          const afterQ = line.replace(/^[^?]*\?/, '').trim();
+          result.comoConheceu = afterQ || lines[i + 1]?.trim() || '';
+        }
+        if (/^nome completo\s*:/i.test(line) && !/responsável/i.test(line))
+          result.nome = line.replace(/^nome completo\s*:\s*/i, '').trim();
+        if (/^cpf\s*:/i.test(line) && !/responsável/i.test(line))
+          result.cpf = line.replace(/^cpf\s*:\s*/i, '').trim();
+        if (/^data de nascimento\s*:/i.test(line))
+          result.dtNascimento = line.replace(/^data de nascimento\s*:\s*/i, '').trim();
+        if (/^nome da m[ãa]e\s*:/i.test(line))
+          result.mae = line.replace(/^nome da m[ãa]e\s*:\s*/i, '').trim();
+        if (/^nome do pai\s*:/i.test(line))
+          result.pai = line.replace(/^nome do pai\s*:\s*/i, '').trim();
+        if (/^email\s*:/i.test(line))
+          result.email = line.replace(/^email\s*:\s*/i, '').trim();
+        if (/^celular\s*:/i.test(line))
+          result.celular = line.replace(/^celular\s*:\s*/i, '').trim();
+        if (/^cep\s*:/i.test(line))
+          result.cep = line.replace(/^cep\s*:\s*/i, '').trim();
+        if (/^endere[çc]o completo\s*:/i.test(line))
+          result.endereco = line.replace(/^endere[çc]o completo\s*:\s*/i, '').trim();
+        if (/^nome completo do respons[aá]vel financeiro\s*:/i.test(line))
+          result.responsavelFinanceiro = line.replace(/^nome completo do respons[aá]vel financeiro\s*:\s*/i, '').trim();
+        if (/^cpf do respons[aá]vel financeiro\s*:/i.test(line))
+          result.cpfResponsavelFinanceiro = line.replace(/^cpf do respons[aá]vel financeiro\s*:\s*/i, '').trim();
+      }
+      return result;
+    }
+
+    function parseSexo(text) {
+      const t = text.trim().toLowerCase();
+      if (t === 'm' || t === 'masculino') return 'M';
+      if (t === 'f' || t === 'feminino') return 'F';
+      return null;
+    }
+
+    function isLikelyForm(text) {
+      return /nome completo\s*:/i.test(text) || /\[INFORMA[ÇC][ÕO]ES/i.test(text);
+    }
+
+    // ── UI helpers ────────────────────────────────────────────────────────────
+    const messagesEl = document.getElementById('messages');
+    const typingEl = document.getElementById('typing');
+
+    function addMessage(role, html) {
+      const initial = currentUser?.name?.charAt(0)?.toUpperCase() || '?';
+      const avatar = role === 'bot' ? '🤖' : initial;
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      div.innerHTML = `
+        <div class="msg-avatar">${avatar}</div>
+        <div class="msg-bubble">${html}</div>
+      `;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setTyping(show) {
+      typingEl.style.display = show ? 'flex' : 'none';
+      if (show) messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function formatPreview(d) {
+      const row = (label, val) => val ? `<b>${label}</b> ${esc(val)}\n` : '';
+      return (
+        row('👤 Nome:', d.nome) +
+        row('🪪 CPF:', d.cpf) +
+        row('🎂 Nascimento:', d.dtNascimento) +
+        row('👩 Mãe:', d.mae) +
+        row('👨 Pai:', d.pai) +
+        row('📧 Email:', d.email) +
+        row('📱 Celular:', d.celular) +
+        row('📍 CEP:', d.cep) +
+        row('🏠 Endereço:', d.endereco) +
+        (d.cidade ? `<b>🏙 Cidade:</b> ${esc(d.cidade)}/${esc(d.uf)}\n` : '') +
+        (d.bairro ? `<b>🏘 Bairro:</b> ${esc(d.bairro)}\n` : '') +
+        row('💼 Resp. Financeiro:', d.responsavelFinanceiro) +
+        row('🪪 CPF Resp.:', d.cpfResponsavelFinanceiro)
+      ).trim();
+    }
+
+    // ── Lógica principal ──────────────────────────────────────────────────────
+    async function handleMessage(text) {
+      const userText = text.trim();
+      if (!userText) return;
+
+      addMessage('user', esc(userText));
+
+      // Comando cancelar
+      if (/^(cancelar|cancel|sair|abort)$/i.test(userText) && state !== 'idle') {
+        state = 'idle';
+        pendingData = null;
+        addMessage('bot', 'Cadastro cancelado. Pode colar um novo formulário quando quiser.');
+        return;
+      }
+
+      if (state === 'waiting_sex') {
+        const sexo = parseSexo(userText);
+        if (!sexo) {
+          addMessage('bot', 'Não entendi. Responda <b>M</b> para Masculino ou <b>F</b> para Feminino.\n(ou "cancelar" para desistir)');
+          return;
+        }
+        pendingData.sexo = sexo;
+        await registerPatient(pendingData);
+        return;
+      }
+
+      // Tenta interpretar como formulário
+      if (!isLikelyForm(userText)) {
+        addMessage('bot', 'Não identifiquei um formulário aqui. Cole o formulário padrão preenchido com nome, CPF e demais campos.');
+        return;
+      }
+
+      const parsed = parseForm(userText);
+
+      if (!parsed.nome || !parsed.cpf) {
+        addMessage('bot', 'Consegui identificar o formulário, mas faltam dados obrigatórios (<b>Nome</b> e <b>CPF</b>). Verifique se o formulário está completo e tente novamente.');
+        return;
+      }
+
+      setTyping(true);
+
+      // Consulta CEP
+      if (parsed.cep) {
+        try {
+          const cep = parsed.cep.replace(/\D/g, '');
+          const cepData = await api(`/api/cep/${cep}`);
+          if (cepData && !cepData.error) {
+            parsed.bairro = parsed.bairro || cepData.bairro || '';
+            parsed.cidade = parsed.cidade || cepData.localidade || '';
+            parsed.uf = parsed.uf || cepData.uf || '';
+          }
+        } catch { /* segue sem dados do CEP */ }
+      }
+
+      setTyping(false);
+
+      const preview = formatPreview(parsed);
+      addMessage('bot', `📋 <b>Formulário identificado:</b>\n\n${preview}\n\n─────────────────────\n\n<b>Qual o sexo do paciente?</b>\nResponda <b>M</b> (Masculino) ou <b>F</b> (Feminino).`);
+
+      pendingData = parsed;
+      state = 'waiting_sex';
+    }
+
+    async function registerPatient(data) {
+      setTyping(true);
+      addMessage('bot', '⏳ Cadastrando paciente no imuneweb…');
+
+      try {
+        const result = await api('/api/register', {
+          method: 'POST',
+          body: JSON.stringify({ formData: data })
+        });
+
+        setTyping(false);
+
+        if (result.error) {
+          addMessage('bot', `❌ <b>Erro ao cadastrar:</b>\n<span class="error-badge">${esc(result.error)}</span>\n\nVerifique os dados e tente novamente.`);
+        } else {
+          const cdc = result.cdc;
+          if (cdc) {
+            addMessage('bot', `✅ <b>Paciente cadastrado com sucesso!</b>\n\n<b>CDC:</b> <span class="cdc-badge">${esc(cdc)}</span>\n\n<b>Paciente:</b> ${esc(data.nome)}`);
+          } else {
+            addMessage('bot', `✅ <b>Paciente registrado no imuneweb!</b>\n\n⚠️ O sistema não retornou o CDC automaticamente. Verifique no imuneweb buscando pelo CPF: <b>${esc(data.cpf)}</b>\n\n<details><summary>Resposta bruta da API</summary>${esc(JSON.stringify(result.raw, null, 2))}</details>`);
+          }
+        }
+      } catch (err) {
+        setTyping(false);
+        addMessage('bot', `❌ <b>Erro de conexão.</b> Tente novamente.\n<span class="error-badge">${esc(err.message)}</span>`);
+      }
+
+      state = 'idle';
+      pendingData = null;
+    }
+
+    // ── Input ─────────────────────────────────────────────────────────────────
+    const inputEl = document.getElementById('input');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function autoResize() {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 180) + 'px';
+    }
+    inputEl.addEventListener('input', autoResize);
+
+    function send() {
+      const text = inputEl.value;
+      if (!text.trim()) return;
+      inputEl.value = '';
+      autoResize();
+      handleMessage(text);
+    }
+
+    sendBtn.addEventListener('click', send);
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────────
+    initUser().then(() => {
+      addMessage('bot', `Olá! 👋\n\nCole o formulário de cadastro preenchido aqui e eu registro o paciente no imuneweb automaticamente.\n\n<b>Como usar:</b>\n1. Cole o formulário completo\n2. Informe o sexo (M/F)\n3. Receba o CDC`);
+    });
+  </script>
+</body>
+</html>

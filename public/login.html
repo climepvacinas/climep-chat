@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Climep — Login</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f4ff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 48px 40px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 32px rgba(30, 64, 175, 0.12);
+    }
+    .logo { text-align: center; margin-bottom: 36px; }
+    .logo h1 { font-size: 32px; font-weight: 800; color: #1e40af; letter-spacing: -1px; }
+    .logo p { color: #6b7280; font-size: 14px; margin-top: 6px; }
+    .field { margin-bottom: 20px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    input {
+      width: 100%; padding: 11px 14px; border: 1.5px solid #e5e7eb;
+      border-radius: 10px; font-size: 15px; outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input:focus { border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30,64,175,0.1); }
+    .btn {
+      width: 100%; padding: 13px; background: #1e40af; color: #fff;
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s; margin-top: 4px;
+    }
+    .btn:hover { background: #1e3a8a; }
+    .btn:disabled { background: #93c5fd; cursor: not-allowed; }
+    .error {
+      background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+      padding: 11px 14px; border-radius: 10px; font-size: 14px; margin-bottom: 18px; display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>Climep</h1>
+      <p>Cadastro de Pacientes via Chat</p>
+    </div>
+    <div class="error" id="err"></div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="email" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn" id="btn">Entrar</button>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('climep_token');
+    if (token) {
+      fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => { if (r.ok) location.href = '/'; })
+        .catch(() => {});
+    }
+
+    const btn = document.getElementById('btn');
+    const err = document.getElementById('err');
+
+    async function login() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      err.style.display = 'none';
+      if (!email || !password) { err.textContent = 'Preencha email e senha.'; err.style.display = 'block'; return; }
+      btn.disabled = true; btn.textContent = 'Entrando…';
+      try {
+        const r = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const d = await r.json();
+        if (!r.ok) { err.textContent = d.error || 'Erro ao fazer login.'; err.style.display = 'block'; return; }
+        localStorage.setItem('climep_token', d.token);
+        localStorage.setItem('climep_user', JSON.stringify(d.user));
+        location.href = '/';
+      } catch { err.textContent = 'Erro de conexão.'; err.style.display = 'block'; }
+      finally { btn.disabled = false; btn.textContent = 'Entrar'; }
+    }
+
+    btn.addEventListener('click', login);
+    document.addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
+  </script>
+</body>
+</html>
