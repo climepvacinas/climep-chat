@@ -76,7 +76,7 @@ app.post('/api/register', requireAuth, async (req, res) => {
   const { formData } = req.body;
   if (!formData) return res.status(400).json({ error: 'Dados não fornecidos' });
 
-  const clean = v => (v || '').toString().trim();
+  const clean = v => (v || '').toString().trim().replace(/\s+/g, ' ');
   const digits = v => clean(v).replace(/\D/g, '');
 
   try {

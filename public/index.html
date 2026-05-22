@@ -174,7 +174,7 @@
 
     // ── Parser do formulário ──────────────────────────────────────────────────
     function parseForm(text) {
-      const lines = text.split('\n').map(l => l.trim());
+      const lines = text.normalize('NFC').split('\n').map(l => l.trim());
       const result = {};
 
       for (let i = 0; i < lines.length; i++) {
