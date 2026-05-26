@@ -84,7 +84,7 @@ app.post('/api/register', requireAuth, async (req, res) => {
     params.append('usuario', IMUNEWEB_USER);
     params.append('token', IMUNEWEB_TOKEN);
     params.append('nome', clean(formData.nome));
-    params.append('dtNascimento', clean(formData.dtNascimento));
+    params.append('dtNascimento', clean(formData.dtNascimento).replace(/\s/g, ''));
     params.append('sexo', clean(formData.sexo));
     params.append('mae', clean(formData.mae));
     params.append('pai', clean(formData.pai));
