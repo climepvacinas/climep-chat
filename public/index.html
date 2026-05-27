@@ -182,7 +182,8 @@
 
         if (/como você conheceu/i.test(line)) {
           const afterQ = line.replace(/^[^?]*\?/, '').trim();
-          result.comoConheceu = afterQ || lines[i + 1]?.trim() || '';
+          const val = afterQ || lines[i + 1]?.trim() || '';
+          result.comoConheceuClinica = val.substring(0, 100);
         }
         if (/^nome completo\s*:/i.test(line) && !/responsável/i.test(line))
           result.nome = line.replace(/^nome completo\s*:\s*/i, '').trim();
@@ -284,7 +285,8 @@
         (d.cidade ? `<b>🏙 Cidade:</b> ${esc(d.cidade)}/${esc(d.uf)}\n` : '') +
         (d.bairro ? `<b>🏘 Bairro:</b> ${esc(d.bairro)}\n` : '') +
         row('💼 Resp. Financeiro:', d.responsavelFinanceiro) +
-        row('🪪 CPF Resp.:', d.cpfResponsavelFinanceiro)
+        row('🪪 CPF Resp.:', d.cpfResponsavelFinanceiro) +
+        row('💬 Como conheceu:', d.comoConheceuClinica)
       ).trim();
     }
 
@@ -310,6 +312,17 @@
           return;
         }
         pendingData.sexo = sexo;
+        if (!pendingData.comoConheceuClinica) {
+          addMessage('bot', 'Como o paciente conheceu a Climep?\n(ex: indicação médica, Instagram, Google, amigo…)');
+          state = 'waiting_como_conheceu';
+        } else {
+          await registerPatient(pendingData);
+        }
+        return;
+      }
+
+      if (state === 'waiting_como_conheceu') {
+        pendingData.comoConheceuClinica = userText.substring(0, 100);
         await registerPatient(pendingData);
         return;
       }

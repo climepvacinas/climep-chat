@@ -100,6 +100,7 @@ app.post('/api/register', requireAuth, async (req, res) => {
     params.append('uf', clean(formData.uf));
     params.append('responsavelFinanceiro', clean(formData.responsavelFinanceiro));
     params.append('cpfResponsavelFinanceiro', digits(formData.cpfResponsavelFinanceiro));
+    params.append('comoConheceuClinica', clean(formData.comoConheceuClinica).substring(0, 100));
 
     const response = await fetch(`${IMUNEWEB_BASE}/paciente/cadastro`, {
       method: 'POST',
