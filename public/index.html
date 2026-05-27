@@ -200,14 +200,34 @@
           result.celular = line.replace(/^celular\s*:\s*/i, '').trim();
         if (/^cep\s*:/i.test(line))
           result.cep = line.replace(/^cep\s*:\s*/i, '').trim();
-        if (/^endere[çc]o completo\s*:/i.test(line))
-          result.endereco = line.replace(/^endere[çc]o completo\s*:\s*/i, '').trim();
+        if (/^endere[çc]o completo\s*:/i.test(line)) {
+          const full = line.replace(/^endere[çc]o completo\s*:\s*/i, '').trim();
+          const { endereco, numero, complemento } = parseAddress(full);
+          result.endereco = endereco;
+          result.numero = numero;
+          result.complemento = complemento;
+        }
         if (/^nome completo do respons[aá]vel financeiro\s*:/i.test(line))
           result.responsavelFinanceiro = line.replace(/^nome completo do respons[aá]vel financeiro\s*:\s*/i, '').trim();
         if (/^cpf do respons[aá]vel financeiro\s*:/i.test(line))
           result.cpfResponsavelFinanceiro = line.replace(/^cpf do respons[aá]vel financeiro\s*:\s*/i, '').trim();
       }
       return result;
+    }
+
+    function parseAddress(full) {
+      const s = (full || '').trim();
+      if (!s) return { endereco: '', numero: '', complemento: '' };
+      // Encontra o primeiro número (com ou sem prefixo nº/n°)
+      const m = s.match(/^(.+?)(?:[,\s]+n[º°.]\s*|[,\s]+)(\d+)(.*)?$/i);
+      if (!m) return { endereco: s, numero: '', complemento: '' };
+      const street = m[1].replace(/[,\s]+$/, '').trim();
+      const numero = m[2].trim();
+      let rest = (m[3] || '').replace(/^[\s,\/]+/, '').trim();
+      // Remove "/ bairro" ou "bairro XXXX" no final (bairro já está em campo separado)
+      rest = rest.replace(/[\/,]?\s*bairro\s+.+$/i, '').trim();
+      rest = rest.replace(/\s*\/\s*[A-Za-zÀ-ú][A-Za-zÀ-ú\s]*$/, '').trim();
+      return { endereco: street, numero, complemento: rest };
     }
 
     function parseSexo(text) {
@@ -259,6 +279,8 @@
         row('📱 Celular:', d.celular) +
         row('📍 CEP:', d.cep) +
         row('🏠 Endereço:', d.endereco) +
+        row('🔢 Número:', d.numero) +
+        row('🏢 Complemento:', d.complemento) +
         (d.cidade ? `<b>🏙 Cidade:</b> ${esc(d.cidade)}/${esc(d.uf)}\n` : '') +
         (d.bairro ? `<b>🏘 Bairro:</b> ${esc(d.bairro)}\n` : '') +
         row('💼 Resp. Financeiro:', d.responsavelFinanceiro) +

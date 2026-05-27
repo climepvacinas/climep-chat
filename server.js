@@ -93,6 +93,8 @@ app.post('/api/register', requireAuth, async (req, res) => {
     params.append('celular', digits(formData.celular));
     params.append('cep', digits(formData.cep));
     params.append('endereco', clean(formData.endereco));
+    params.append('numero', clean(formData.numero));
+    params.append('complemento', clean(formData.complemento));
     params.append('bairro', clean(formData.bairro));
     params.append('cidade', clean(formData.cidade));
     params.append('uf', clean(formData.uf));
