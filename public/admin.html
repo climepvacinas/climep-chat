@@ -105,6 +105,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="users">👥 Usuários</button>
       <button class="tab" data-tab="logs">📋 Logs de Atividade</button>
+      <button class="tab" data-tab="como-conheceu">📌 Como Conheceu</button>
     </div>
 
     <!-- ── Usuários ── -->
@@ -144,6 +145,29 @@
           <tbody id="usersBody">
             <tr><td colspan="5" class="empty">Carregando…</td></tr>
           </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── Como Conheceu ── -->
+    <div class="tab-panel" id="tab-como-conheceu">
+      <div class="card">
+        <div class="card-title">Adicionar opção</div>
+        <div class="alert alert-success" id="ccSuccess"></div>
+        <div class="alert alert-error" id="ccError"></div>
+        <div class="form-row" style="align-items:flex-end">
+          <div class="field"><label>Nome da opção</label><input type="text" id="ccLabel" placeholder="Ex: INDICACAO DE MÉDICO"></div>
+          <div><button class="btn btn-primary" id="ccAddBtn">Adicionar</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Opções cadastradas (<span id="ccCount">…</span>)</div>
+        <div class="filters">
+          <input type="text" id="ccSearch" placeholder="Filtrar opções…" style="flex:1;min-width:200px">
+        </div>
+        <table id="ccTable">
+          <thead><tr><th>Opção</th><th style="width:90px">Ação</th></tr></thead>
+          <tbody id="ccBody"><tr><td colspan="2" class="empty">Carregando…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -219,6 +243,7 @@
         tab.classList.add('active');
         document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
         if (tab.dataset.tab === 'logs') loadLogs();
+        if (tab.dataset.tab === 'como-conheceu') loadComoConheceu();
       });
     });
 
@@ -342,6 +367,52 @@
     document.getElementById('filterBtn').addEventListener('click', () => renderLogs(allLogs));
     document.getElementById('refreshBtn').addEventListener('click', loadLogs);
     document.getElementById('filterSearch').addEventListener('input', () => renderLogs(allLogs));
+
+    // ── Como Conheceu ─────────────────────────────────────────────────────────
+    let allCc = [];
+
+    async function loadComoConheceu() {
+      const list = await api('/api/como-conheceu');
+      if (!list) return;
+      allCc = list;
+      renderCc(list);
+    }
+
+    function renderCc(list) {
+      const q = document.getElementById('ccSearch').value.toLowerCase().trim();
+      const filtered = q ? list.filter(o => o.label.toLowerCase().includes(q)) : list;
+      document.getElementById('ccCount').textContent = list.length;
+      const body = document.getElementById('ccBody');
+      if (!filtered.length) { body.innerHTML = '<tr><td colspan="2" class="empty">Nenhuma opção encontrada.</td></tr>'; return; }
+      body.innerHTML = filtered.map(o => `
+        <tr>
+          <td>${esc(o.label)}</td>
+          <td><button class="btn btn-danger btn-sm" onclick="deleteCc(${o.id}, '${esc(o.label)}')">🗑 Excluir</button></td>
+        </tr>
+      `).join('');
+    }
+
+    document.getElementById('ccSearch').addEventListener('input', () => renderCc(allCc));
+
+    document.getElementById('ccAddBtn').addEventListener('click', async () => {
+      const label = document.getElementById('ccLabel').value.trim().toUpperCase();
+      if (!label) { showAlert('ccError', 'Digite o nome da opção.', true); return; }
+      const btn = document.getElementById('ccAddBtn');
+      btn.disabled = true;
+      const result = await api('/api/admin/como-conheceu', { method: 'POST', body: JSON.stringify({ label }) });
+      btn.disabled = false;
+      if (result?.error) { showAlert('ccError', result.error, true); return; }
+      showAlert('ccSuccess', `Opção "${label}" adicionada.`);
+      document.getElementById('ccLabel').value = '';
+      loadComoConheceu();
+    });
+
+    async function deleteCc(id, label) {
+      if (!confirm(`Excluir a opção "${label}"?`)) return;
+      const result = await api(`/api/admin/como-conheceu/${id}`, { method: 'DELETE' });
+      if (result?.error) { alert(result.error); return; }
+      loadComoConheceu();
+    }
 
     // ── Init ──────────────────────────────────────────────────────────────────
     loadUsers();

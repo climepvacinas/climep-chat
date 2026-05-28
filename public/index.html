@@ -169,8 +169,9 @@
     }
 
     // ── Estado da conversa ────────────────────────────────────────────────────
-    let state = 'idle'; // 'idle' | 'waiting_sex'
+    let state = 'idle';
     let pendingData = null;
+    let pendingOptions = [];
 
     // ── Parser do formulário ──────────────────────────────────────────────────
     function parseForm(text) {
@@ -316,7 +317,16 @@
         }
         pendingData.sexo = sexo;
         if (!pendingData.comoConheceuClinica) {
-          addMessage('bot', 'Como o paciente conheceu a Climep?\n(ex: indicação médica, Instagram, Google, amigo…)');
+          try {
+            const opts = await api('/api/como-conheceu');
+            pendingOptions = opts && opts.length ? opts : [];
+          } catch { pendingOptions = []; }
+          if (pendingOptions.length) {
+            const list = pendingOptions.map((o, i) => `${i + 1}. ${o.label}`).join('\n');
+            addMessage('bot', `Como o paciente conheceu a Climep?\nDigite o <b>número</b> ou parte do <b>nome</b> para filtrar:\n\n<pre style="font-size:12px;line-height:1.6;max-height:300px;overflow-y:auto">${esc(list)}</pre>`);
+          } else {
+            addMessage('bot', 'Como o paciente conheceu a Climep?\n(ex: indicação médica, Instagram, Google…)');
+          }
           state = 'waiting_como_conheceu';
         } else {
           await registerPatient(pendingData);
@@ -337,8 +347,28 @@
       }
 
       if (state === 'waiting_como_conheceu') {
-        pendingData.comoConheceuClinica = userText.substring(0, 100);
-        await registerPatient(pendingData);
+        const num = parseInt(userText);
+        if (!isNaN(num) && num >= 1 && num <= pendingOptions.length) {
+          pendingData.comoConheceuClinica = pendingOptions[num - 1].label;
+          pendingOptions = [];
+          await registerPatient(pendingData);
+          return;
+        }
+        const query = userText.toLowerCase().trim();
+        const matches = pendingOptions.filter(o => o.label.toLowerCase().includes(query));
+        if (matches.length === 1) {
+          pendingData.comoConheceuClinica = matches[0].label;
+          pendingOptions = [];
+          await registerPatient(pendingData);
+          return;
+        }
+        if (matches.length > 1) {
+          pendingOptions = matches;
+          const list = matches.map((o, i) => `${i + 1}. ${o.label}`).join('\n');
+          addMessage('bot', `${matches.length} opções encontradas. Digite o número:\n\n${list}\n\n(ou refine a busca)`, 'monospace');
+          return;
+        }
+        addMessage('bot', 'Nenhuma opção encontrada com esse texto. Tente outra palavra ou "cancelar".');
         return;
       }
 

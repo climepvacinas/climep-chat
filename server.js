@@ -180,6 +180,24 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// ── Como conheceu ─────────────────────────────────────────────────────────────
+
+app.get('/api/como-conheceu', requireAuth, (req, res) => {
+  res.json(db.comoConheceu.getAll());
+});
+
+app.post('/api/admin/como-conheceu', requireAdmin, (req, res) => {
+  const label = (req.body.label || '').trim().toUpperCase();
+  if (!label) return res.status(400).json({ error: 'Label é obrigatório' });
+  const item = db.comoConheceu.create(label);
+  res.json(item);
+});
+
+app.delete('/api/admin/como-conheceu/:id', requireAdmin, (req, res) => {
+  db.comoConheceu.delete(req.params.id);
+  res.json({ success: true });
+});
+
 // ── Admin: logs ───────────────────────────────────────────────────────────────
 
 app.get('/api/admin/logs', requireAdmin, (req, res) => {
