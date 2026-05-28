@@ -219,16 +219,19 @@
     function parseAddress(full) {
       const s = (full || '').trim();
       if (!s) return { endereco: '', numero: '', complemento: '' };
-      // Encontra o primeiro número (com ou sem prefixo nº/n°)
       const m = s.match(/^(.+?)(?:[,\s]+n[º°.]\s*|[,\s]+)(\d+)(.*)?$/i);
       if (!m) return { endereco: s, numero: '', complemento: '' };
       const street = m[1].replace(/[,\s]+$/, '').trim();
       const numero = m[2].trim();
       let rest = (m[3] || '').replace(/^[\s,\/]+/, '').trim();
-      // Remove "/ bairro" ou "bairro XXXX" no final (bairro já está em campo separado)
+      // Remove "bairro XXXX" e "Cidade/UF" no final
       rest = rest.replace(/[\/,]?\s*bairro\s+.+$/i, '').trim();
+      rest = rest.replace(/,?\s*[A-Za-zÀ-ú][A-Za-zÀ-ú\s]*\/[A-Z]{2}$/i, '').trim();
       rest = rest.replace(/\s*\/\s*[A-Za-zÀ-ú][A-Za-zÀ-ú\s]*$/, '').trim();
-      return { endereco: street, numero, complemento: rest };
+      // Descarta se não parece complemento (sem palavra-chave nem número simples)
+      const isComp = /\b(ap|apto|apartamento|sala|bl|bloco|casa|cs|fundos|sl|conj|cj|andar|pav|loja)\b/i.test(rest)
+                  || /^\d+[A-Za-z]?$/.test(rest);
+      return { endereco: street, numero, complemento: isComp ? rest : '' };
     }
 
     function parseSexo(text) {
@@ -321,6 +324,18 @@
         return;
       }
 
+      if (state === 'waiting_nascimento') {
+        const d = userText.replace(/\s/g, '');
+        if (!/^\d{2}\/\d{2}\/\d{4}$/.test(d)) {
+          addMessage('bot', 'Formato inválido. Informe a data no formato <b>dd/mm/aaaa</b> (ex: 15/03/1990).\n(ou "cancelar" para desistir)');
+          return;
+        }
+        pendingData.dtNascimento = d;
+        addMessage('bot', '<b>Qual o sexo do paciente?</b>\nResponda <b>M</b> (Masculino) ou <b>F</b> (Feminino).');
+        state = 'waiting_sex';
+        return;
+      }
+
       if (state === 'waiting_como_conheceu') {
         pendingData.comoConheceuClinica = userText.substring(0, 100);
         await registerPatient(pendingData);
@@ -358,10 +373,15 @@
       setTyping(false);
 
       const preview = formatPreview(parsed);
-      addMessage('bot', `📋 <b>Formulário identificado:</b>\n\n${preview}\n\n─────────────────────\n\n<b>Qual o sexo do paciente?</b>\nResponda <b>M</b> (Masculino) ou <b>F</b> (Feminino).`);
-
       pendingData = parsed;
-      state = 'waiting_sex';
+
+      if (!parsed.dtNascimento) {
+        addMessage('bot', `📋 <b>Formulário identificado:</b>\n\n${preview}\n\n─────────────────────\n\n⚠️ <b>Data de nascimento não encontrada.</b>\nInforme a data no formato <b>dd/mm/aaaa</b>:`);
+        state = 'waiting_nascimento';
+      } else {
+        addMessage('bot', `📋 <b>Formulário identificado:</b>\n\n${preview}\n\n─────────────────────\n\n<b>Qual o sexo do paciente?</b>\nResponda <b>M</b> (Masculino) ou <b>F</b> (Feminino).`);
+        state = 'waiting_sex';
+      }
     }
 
     async function registerPatient(data) {
